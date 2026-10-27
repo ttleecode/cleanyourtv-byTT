@@ -15,7 +15,7 @@
 - 電視 IP：`<tv-ip>`
 - 電腦作業系統：`<Windows / macOS / Linux>`
 - 要做到哪一步：`<只去廣告 / 去廣告＋換首頁 / 再加照片桌布>`
-- 工具：使用 https://github.com/Gathin23/cleanyourtv 的 `tools/` 與 `launcher/`，**不要自己另寫工具**；先讀它的 `PROMPT.md` 與 `AGENTS.md`。中文指南：`<本 repo 網址>` 的 `docs/`。
+- 工具：使用 https://github.com/Gathin23/cleanyourtv 的 `tools/` 與 `launcher/`，**不要自己另寫工具**；先讀它的 `PROMPT.md` 與 `AGENTS.md`。中文指南：https://github.com/ttleecode/cleanyourtv-byTT 的 `docs/`。
 - **如果電視是 TCL Android TV 11（`ro.product.device` 是 BeyondTV4 或 `ro.product.name` 是 G03_*），另外讀指南的附錄 A（`docs/appendix-a-tcl-android-tv-11.md`）。**
 
 ## 安全規則（不可違反）
