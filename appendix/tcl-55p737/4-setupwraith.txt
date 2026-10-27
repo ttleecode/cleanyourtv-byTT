@@ -1,5 +1,5 @@
 # TCL 55P737, batch 4: Google TV setup wizard, which claims Home once launcherx is disabled.
-# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/examples-55p737/4-setupwraith.txt
-# Undo:  TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/examples-55p737/4-setupwraith.txt
+# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/appendix/tcl-55p737/4-setupwraith.txt
+# Undo:  TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/appendix/tcl-55p737/4-setupwraith.txt
 # Checked first: every saved Wi-Fi network belongs to android.uid.system (cmd wifi list-networks, dumpsys wifi cname).
 com.google.android.tungsten.setupwraith

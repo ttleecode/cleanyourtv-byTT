@@ -1,6 +1,6 @@
 # 3. 去廣告（debloat）
 
-以下指令都在原專案 `cleanyourtv` 資料夾、已設定 `$env:TV_HOST = '<tv-ip>'` 的 PowerShell 裡執行（Git Bash 用 `TV_HOST=<tv-ip> tools/disable.sh ...` 也可以）。
+以下指令都在原專案 `cleanyourtv` 資料夾、已設定 `$env:TV_HOST = '<tv-ip>'` 的 PowerShell 裡執行（Git Bash 用 `TV_HOST=<tv-ip> tools/disable.sh ...`）。
 
 ## 步驟 1：先備份
 
@@ -14,68 +14,89 @@ mkdir backup
 foreach ($ns in 'system','secure','global') { & $tv -I tools\tv.py "settings list $ns" > backup\settings-$ns.txt }
 ```
 
-`backup/` 在原專案的 `.gitignore` 裡，不會被誤上傳；裡面有序號，不要分享。`tools/disable.sh` 另外會自動在 `~/.cleanyourtv/` 留一份還原紀錄。
+**驗證**：`backup\` 裡六個檔案都有內容。`backup/` 在原專案 `.gitignore` 裡；裡面有序號，不要分享。`tools/disable.sh` 另外會自動在 `~/.cleanyourtv/` 留一份還原紀錄。
 
-## 步驟 2：挑最接近的清單
+## 步驟 2：找最接近的清單
 
-到原專案 [`examples/`](https://github.com/Gathin23/cleanyourtv/tree/main/examples) 找型號、`ro.product.name`、韌體版本最接近的資料夾。TCL 有 50 多份。
-同韌體 `V8-R51MT05-LF1V620` 的 55P737 直接用了 `examples/tcl-55c725` 的內容。
+到原專案 [`examples/`](https://github.com/Gathin23/cleanyourtv/tree/main/examples)（索引在 `examples/README.md`）找：
 
-逐行比對清單裡的套件你的電視有沒有、是不是已停用（例：`pm list packages -f` 裡有沒有這個名字）。
+1. 同品牌、`ro.product.name` 或 `ro.product.device` 相同的資料夾，最好連韌體版本（fingerprint 或廠商版本號）都相同。
+2. 沒有完全相同的，就找同品牌、同 Android 版本、同首頁 App 的。
+3. 都沒有的話，原專案的流程會讓 AI 助手從 `pm list packages` 自己分類；手動做就參考同品牌的清單逐個查。
 
-## 步驟 3：依你的使用習慣勾選
-
-停用前先問清楚家裡在用什麼。這台的選擇與理由：
-
-| 保留 | 套件 | 理由 |
-|---|---|---|
-| Chromecast | `com.google.android.apps.mediashell` | 手機投放要用 |
-| Miracast 螢幕鏡像 | `com.tcl.miracast` | 手機鏡像要用 |
-| Google 語音助理 | `com.google.android.katniss`、`com.tcl.assistant` | 遙控器麥克風鍵 |
-| Google TV 手機遙控服務 | `com.google.android.tv.remote.service` | **安全起見保留**：同韌體清單註明有些 TCL 遙控器的麥克風靠它 |
-| 韌體更新 | `com.tcl.versionUpdateApp` | 原專案建議保留 |
-| TCL WebView | `com.tcl.android.webview` | 只去廣告不換首頁時保守保留 |
-| 齒輪鍵快捷面板 | `com.tcl.dashboard` | 不換首頁時，齒輪鍵靠它 |
-| 螢幕保護（ambient） | `com.google.android.apps.tv.dreamx` | 不換首頁時保留 |
-| 設定精靈 | `com.google.android.tungsten.setupwraith` | **只有換首頁時才停用**，見第 4 章 |
-
-**絕對不要停用**：`com.tcl.tv`、`com.tcl.tvinput`（HDMI 與電視訊號）、`com.tcl.tcl_bt_rcu_service`、`com.tcl.autopair`（遙控器配對）、`com.tcl.settings`、`com.tcl.inputmethod.international`（螢幕鍵盤）、`com.tcl.providers.config`、`com.tcl.system.server`、`com.tcl.initsetup`，以及任何 `com.android.*` 核心套件、Play 商店與 Play 服務。工廠／測試類套件（名字有 factory、fac）**連開都不要開**。
-
-## 步驟 4：分小批停用，每批截圖
-
-把清單拆成幾個檔案，一次套一批。本 repo 的 [`examples-55p737/`](../examples-55p737/) 就是這台實際用的四批：
-
-| 檔案 | 內容 | 數量 |
-|---|---|---|
-| `1-ads-telemetry.txt` | TCL 首頁推播、TCL Channel、FAST 頻道、TCL 數據分析、logkit、Google 預裝自動安裝器 | 12 |
-| `2-background.txt` | 用不到的背景服務（行事曆同步、WebView 測試瀏覽器、TCL guard／說明書等） | 8 |
-| `3-preloads-by-choice.txt` | 依使用者勾選停用的預裝 App（T-Cast、Alexa、USB 播放器、相簿、TCL 瀏覽器等） | 7 |
-| `4-setupwraith.txt` | Google TV 設定精靈，**換首頁時才用** | 1 |
+拿到清單後逐行比對：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost <tv-ip> <本 repo 路徑>\examples-55p737\1-ads-telemetry.txt
-tools\venv\Scripts\python.exe -I tools\tv.py --screenshot shots\01.png HOME --wait 6
+tools\venv\Scripts\python.exe -I tools\tv.py "pm list packages <關鍵字>"
 ```
 
-每批跑完看截圖：首頁出得來、Input 鍵能切 HDMI、能看電視，才繼續下一批。
-看電視或 HDMI 時截圖會是 0 bytes，那是電視的限制，不是壞掉。
+**驗證**：清單中每個套件都在你的電視上（不在的刪掉或註解掉），並記下哪些原本就是停用的（`pm list packages -d`）。
 
-> 停用 TCL 的東西拿不掉 Google TV 首頁最上面的「贊助」大橫幅，那是 Google TV 首頁自己的。要拿掉它，只能開 Google 帳戶的「僅限應用程式模式」，或換成第 4 章的新首頁。
+不認識的套件先查用途：`tools\tv.py "dumpsys package <套件名>"`，看它有哪些 activity／service，仍不確定就保留。
+
+## 步驟 3：依家人的使用習慣勾選
+
+停用前先決定這些要不要留：
+
+| 類別 | 常見套件 | 留下的理由 |
+|---|---|---|
+| Chromecast | `com.google.android.apps.mediashell` | 手機在 App 裡投放 |
+| 螢幕鏡像（Miracast） | 各廠商不同，名字常含 `miracast`、`cast` | 手機整個畫面鏡像 |
+| 語音助理 | `com.google.android.katniss`（加上廠商自己的） | 遙控器麥克風鍵 |
+| Google TV 手機遙控 | `com.google.android.tv.remote.service` | 部分電視的遙控器麥克風靠它，**不確定就留** |
+| 韌體更新 | 廠商的 update／ota 類 App | 原專案建議保留 |
+| 串流 App | Netflix、YouTube、Disney+… | 有在用就留 |
+| USB 播放器、相簿 | 廠商的 media center／gallery | 要插隨身碟看影片就留 |
+
+**絕對不要停用**：
+
+- 電視與 HDMI／天線輸入的 App 與服務（各品牌名稱不同，名字常含 `tv`、`tvinput`、`source`）
+- 遙控器與藍牙配對服務（常含 `rcu`、`remote`、`bt`、`pair`）
+- 螢幕鍵盤（`inputmethod`）、設定 App、Play 商店、Play 服務
+- Android 核心套件：permission controller、package installer、ext services／shared、module metadata、`com.google.android.overlay.modules*`、`com.android.providers.*`（行事曆、聯絡人等少數例外）、`com.android.systemui`、`com.android.shell`、`com.android.phone`、`com.android.settings`、`com.android.tv.settings`、`android`。原專案的 `disable.sh` 會拒絕含這些的清單。
+- 名字有 factory、fac、`mediatek.factorymenu` 的工廠／測試套件可以停用，但**連開都不要開**，有些主機板一開就會切到工廠模式。
+
+## 步驟 4：分小批停用
+
+把清單拆成幾個檔案（每批 5～12 個）。建議的分法：
+
+1. 廣告、推薦內容、數據回傳（analytics、bi、logkit、feedback、partner setup、預裝自動安裝器）
+2. 用不到的背景服務
+3. 依步驟 3 勾掉的預裝 App
+4. （換首頁時才做）Google TV 設定精靈，見第 4 章
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost <tv-ip> <清單檔>
+```
+
+**每批的驗證**（不需要截圖）：
+
+- 腳本輸出每行都是 `new state: disabled-user`。
+- `tools\tv.py "pm list packages -d"` 包含這批所有套件。
+- `tools\tv.py "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"` 還是原本的首頁。
+- 實際看電視：首頁正常、Input 鍵能切 HDMI、能看電視。
+
+可以截圖時：`tools\tv.py --screenshot shots\01.png HOME --wait 6`。播電視或 HDMI 時截圖常是 0 bytes，那是電視的限制，不是壞掉。
+
+> 停用廠商套件拿不掉 Google TV 首頁本身的「贊助」橫幅與推薦列，那是 Google TV 首頁自己的。要拿掉只能開 Google 帳戶的「僅限應用程式模式」，或換成第 4 章的新首頁。
 
 ## 步驟 5：重開機驗證
 
 ```powershell
 tools\venv\Scripts\python.exe -I tools\tv.py "reboot"
-# 等 1～2 分鐘後
+# 等 1～2 分鐘，直到下面這行回 1
+tools\venv\Scripts\python.exe -I tools\tv.py "getprop sys.boot_completed"
 tools\venv\Scripts\python.exe -I tools\tv.py "pm list packages -d"
 ```
 
-比對清單裡的套件是不是都還在停用名單裡。有些韌體每次開機會自己打開某些套件，這台沒有。
+**驗證**：停用的套件都還在名單裡。有些韌體每次開機會自己把特定套件打開，那種就記在清單註解裡，不用每次重停。
 
 ## 還原
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost <tv-ip> <本 repo 路徑>\examples-55p737\3-preloads-by-choice.txt
+powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost <tv-ip> <清單檔>
 ```
 
-每一批各跑一次；順序與停用相反最保險。單一 App 打開回來：`tools\tv.py "pm enable <套件名>"`，例如要插隨身碟看影片就 `pm enable com.tcl.ui_mediaCenter`。
+每一批各跑一次，順序與停用相反最保險。單一 App 打開回來：`tools\tv.py "pm enable <套件名>"`。沒有電腦時，電視「設定 → 應用程式 → 顯示系統應用程式」也能逐一啟用。
+
+一個實際例子（四批清單與保留理由）見 [附錄 A](appendix-a-tcl-android-tv-11.md)。

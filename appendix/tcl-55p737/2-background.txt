@@ -1,6 +1,6 @@
 # TCL 55P737, batch 2: background services not needed. From examples/tcl-55c725.
-# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/examples-55p737/2-background.txt
-# Undo:  TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/examples-55p737/2-background.txt
+# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/appendix/tcl-55p737/2-background.txt
+# Undo:  TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/appendix/tcl-55p737/2-background.txt
 # Kept on purpose for a debloat-only pass with the stock launcherx: com.tcl.android.webview, com.tcl.dashboard
 # (gear key), dreamx (ambient mode), setupwraith.
 com.google.android.onetimeinitializer
