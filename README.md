@@ -4,7 +4,7 @@
 不綁定任何 AI 助手：可以自己照著做，也可以把 [`AGENT-INSTRUCTIONS.md`](AGENT-INSTRUCTIONS.md) 整段貼給任何能執行 shell 指令的 AI 助手。
 
 > 工具本身來自開源專案 **[Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv)**（MIT 授權），本指南撰寫時對照的版本是 commit `34e1c42`（2026-10-23）。
-> 本 repo 只有中文說明、範例與一支桌布腳本，**不含**、也**不修改**原專案程式碼（選配章節附一份未在電視上驗證的 patch，另有警告）。
+> 本 repo 只有中文說明、範例與一支桌布腳本，**不含**、也**不修改**原專案程式碼（選配章節附一份寬按鈕 patch，已在一台 TCL 電視上實機驗證）。
 
 ## 先看這段：它在做什麼、有什麼風險
 
@@ -31,7 +31,7 @@
 
 - [`AGENT-INSTRUCTIONS.md`](AGENT-INSTRUCTIONS.md)：給任何 AI 助手的完整指令（安全規則、步驟、每步怎麼驗證、哪裡要先問你）。
 - [`scripts/make_wallpapers.py`](scripts/make_wallpapers.py)：把照片資料夾轉成電視桌布（最多 100 張、1920×1080、去除 GPS 等拍攝資訊）。
-- [`patches/dock_fill_width.diff`](patches/dock_fill_width.diff)：選配的寬按鈕修改，**尚未在電視上驗證**。
+- [`patches/dock_fill_width.diff`](patches/dock_fill_width.diff)：選配的寬按鈕修改，已在 TCL 55P737 上編譯、測試並實機驗證（細節見第 7 章）。
 
 ## 兩種用法
 
