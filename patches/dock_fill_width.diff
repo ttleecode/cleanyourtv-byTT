@@ -1,0 +1,222 @@
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
+index ea00306..42192a5 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
+@@ -100,11 +100,16 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+      * highlight, capped at the design size so 4 columns on a 1080p TV look exactly as before.
+      */
+     static int tileWidthPx(int innerWidthPx, int columns, float density) {
++        return tileWidthPx(innerWidthPx, columns, false, density);
++    }
++
++    /** fillWidth (dock_fill_width): no cap at the design size, so 2 or 3 columns get tiles as wide as the cell allows. */
++    static int tileWidthPx(int innerWidthPx, int columns, boolean fillWidth, float density) {
+         int design = Math.round(DESIGN_W_DP * density);
+         if (innerWidthPx <= 0 || columns <= 0) return design;
+         int cell = innerWidthPx / columns;
+         int fit = (int) ((cell - 12 * density) / FOCUS_SCALE);
+-        return Math.max(Math.round(80 * density), Math.min(design, fit));
++        return Math.max(Math.round(80 * density), fillWidth ? fit : Math.min(design, fit));
+     }
+ 
+     static int tileHeightPx(int tileWidthPx) {
+@@ -149,8 +154,18 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+      */
+     static int tileWidthPx(int innerWidthPx, int gridHeightPx, int columns, int rowsBelowDock, boolean dockTitle,
+                            boolean dockRow, float density) {
+-        int w = tileWidthPx(innerWidthPx, columns, density);
+-        if (gridHeightPx <= 0 || rowsBelowDock <= 0) return w;
++        return tileWidthPx(innerWidthPx, gridHeightPx, columns, rowsBelowDock, dockTitle, dockRow, false, density);
++    }
++
++    /**
++     * The same with dock_fill_width: the uncapped width is also held to the height with rows_below_dock = 0, so one or
++     * two columns cannot push the dock and its title into the clock. The 85% floor stays relative to the capped size.
++     */
++    static int tileWidthPx(int innerWidthPx, int gridHeightPx, int columns, int rowsBelowDock, boolean dockTitle,
++                           boolean dockRow, boolean fillWidth, float density) {
++        int capped = tileWidthPx(innerWidthPx, columns, density);
++        int w = tileWidthPx(innerWidthPx, columns, fillWidth, density);
++        if (gridHeightPx <= 0 || rowsBelowDock <= 0 && !fillWidth) return w;
+         float reserved = (dockRow ? DOCK_EXTRA_DP + BOTTOM_ROOM_DP + (dockTitle ? TITLE_ROOM_DP : 0)
+                 : TOP_ROOM_DP + COMPACT_BOTTOM_ROOM_DP) * density;
+         float perItem = (gridHeightPx - reserved) / (rowsBelowDock + 1);
+@@ -159,7 +174,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+         // Shrink at most to MIN_HEIGHT_FIT of the width-only size. Below that the tiles look lost in their wide
+         // columns (2 rows under a titled dock came out at 80dp); the rows that still don't fit run off the bottom
+         // and scroll, and MainActivity keeps the title's room above the dock.
+-        return Math.max(Math.max(Math.round(80 * density), Math.round(w * MIN_HEIGHT_FIT)), Math.min(w, byHeight));
++        return Math.max(Math.max(Math.round(80 * density), Math.round(capped * MIN_HEIGHT_FIT)), Math.min(w, byHeight));
+     }
+ 
+     /** The smallest share of the width-only tile size that fitting rows_below_dock into the height may go to. */
+@@ -168,6 +183,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+     private final Context ctx;
+     private final int rowsBelowDock;
+     private final boolean dockTitle;
++    /** Tiles fill their columns past the design width (config.xml, dock_fill_width). */
++    private final boolean fillWidth;
+     /** The owner's saved order (reorder button, Order): key -> rank. Empty when there is none or it no longer applies. */
+     private Map<String, Integer> savedRanks = Collections.emptyMap();
+     /** Dock size recorded with the saved order (Order.docked), or -1: then dock_apps says which tiles are docked. */
+@@ -226,6 +243,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+         this.focusOvershoot = cfg.focusOvershoot;
+         this.rowsBelowDock = cfg.rowsBelowDock;
+         this.dockTitle = cfg.dockTitle;
++        this.fillWidth = cfg.dockFillWidth;
+         this.dockRow = cfg.dockRow;
+         this.restNameAlpha = cfg.alwaysShowNames ? 0.75f : 0f;
+         this.cinematic = cfg.cinematicHome;
+@@ -385,7 +403,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+         float density = parent.getResources().getDisplayMetrics().density;
+         int width = parent.getWidth() > 0 ? parent.getWidth() : parent.getMeasuredWidth();
+         int inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
+-        int w = tileWidthPx(inner, parent.getHeight(), dockSize, rowsBelowDock, dockTitle, dockRow, density), h = tileHeightPx(w);
++        int w = tileWidthPx(inner, parent.getHeight(), dockSize, rowsBelowDock, dockTitle, dockRow, fillWidth, density), h = tileHeightPx(w);
+         View card = v.findViewById(R.id.card);
+         ViewGroup.LayoutParams cardLp = card.getLayoutParams();
+         cardLp.width = w;
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/Config.java b/launcher/app/src/main/java/com/gathin/tvhome/Config.java
+index 6071c88..f1acfb8 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/Config.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/Config.java
+@@ -175,6 +175,8 @@ final class Config {
+     final boolean dockGlass;
+     /** The dock band's padding equals the gap between its tiles (config.xml, dock_even_padding); false keeps the fixed padding. */
+     final boolean dockEvenPadding;
++    /** Tiles fill their columns past the 180dp design width (config.xml, dock_fill_width); false keeps the cap. */
++    final boolean dockFillWidth;
+     /** Shape of the glow behind the focused app (config.xml, glow_style): {@link #GLOW_RADIAL} or {@link #GLOW_HORIZON}. */
+     final String glowStyle;
+ 
+@@ -198,7 +200,7 @@ final class Config {
+                    Festival festival, int[] inputKeycodes, List<String> appKeys, String stockHomeRedirect,
+                    List<RaceWeekend.Race> raceCalendar, boolean cinematicHome, boolean ambientGlow, boolean appGlow, int homeIdleClockMinutes,
+                    boolean keyFilter, boolean dockGlass, String glowStyle, boolean wallpaperCaptions,
+-                   boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding) {
++                   boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding, boolean dockFillWidth) {
+         this.handleViewInputs = handleViewInputs;
+         this.tileMenu = tileMenu;
+         this.inputKeycodes = inputKeycodes;
+@@ -269,6 +271,7 @@ final class Config {
+         this.homeIdleClockMinutes = homeIdleClockMinutes;
+         this.dockGlass = dockGlass;
+         this.dockEvenPadding = dockEvenPadding;
++        this.dockFillWidth = dockFillWidth;
+         this.glowStyle = glowStyle(glowStyle);
+         this.wallpaperCaptions = wallpaperCaptions;
+     }
+@@ -346,6 +349,7 @@ final class Config {
+         boolean keyFilter = res.getBoolean(R.bool.key_filter);
+         boolean dockGlass = res.getBoolean(R.bool.dock_glass);
+         boolean dockEvenPadding = res.getBoolean(R.bool.dock_even_padding);
++        boolean dockFillWidth = res.getBoolean(R.bool.dock_fill_width);
+         String glowStyle = res.getString(R.string.glow_style);
+         boolean applied = false;
+ 
+@@ -416,6 +420,7 @@ final class Config {
+             keyFilter = bool(json, "key_filter", keyFilter);
+             dockGlass = bool(json, "dock_glass", dockGlass);
+             dockEvenPadding = bool(json, "dock_even_padding", dockEvenPadding);
++            dockFillWidth = bool(json, "dock_fill_width", dockFillWidth);
+             glowStyle = string(json, "glow_style", glowStyle);
+         }
+         // A theme push or reset invalidates choices made on the TV. On first use, remember the
+@@ -470,7 +475,7 @@ final class Config {
+                 Math.max(0, Math.min(100, skyIntensity)), settingsKeycodes, settingsKeyPanel, restoreKeyServices, wallpaperEnabled, wallpaper,
+                 wallpapers, rotationMinutes, wallpaperDim, dockOpacity, wallpaperOrder, applied,
+                 festival, inputKeycodes, appKeys, stockHomeRedirect, json == null ? Collections.emptyList() : raceCalendar(json), cinematic, ambientGlow, appGlow,
+-                Math.max(0, idleClockMinutes), keyFilter, dockGlass, glowStyle, wallpaperCaptions, handleViewInputs, tileMenu, dockEvenPadding);
++                Math.max(0, idleClockMinutes), keyFilter, dockGlass, glowStyle, wallpaperCaptions, handleViewInputs, tileMenu, dockEvenPadding, dockFillWidth);
+     }
+ 
+     /**
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
+index 5be43c9..4d9b945 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
+@@ -520,7 +520,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+             int h = b - t;
+             // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
+             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
+-            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
++            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, cfg.dockFillWidth, density);
+             int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
+             int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);   // item height plus DockDecoration offsets
+             int gridRows = itemH * rowsBelowDock;
+diff --git a/launcher/app/src/main/res/values/config.xml b/launcher/app/src/main/res/values/config.xml
+index f600676..999f999 100644
+--- a/launcher/app/src/main/res/values/config.xml
++++ b/launcher/app/src/main/res/values/config.xml
+@@ -202,6 +202,10 @@
+          so its corners are concentric with the tiles' and the spacing reads even. false (the default) keeps the fixed
+          14dp above and below, up to 22dp at the sides and 26dp corners. Can also be set with "dock_even_padding": true in a theme's config.json. -->
+     <bool name="dock_even_padding">false</bool>
++    <!-- Tiles grow to fill their columns instead of stopping at the 180dp design width, so 2 or 3 columns give large
++         tiles with a small gap (still 16:9, still clear of the focus zoom; the dock and its title still fit the height).
++         false (the default) keeps the 180dp cap. Can also be set with "dock_fill_width": true in a theme's config.json. -->
++    <bool name="dock_fill_width">false</bool>
+     <!-- A reorder button (two arrows) in the top bar. Off by default: reordering is also in the Settings
+          button's long-press menu, so it needs no extra button on screen. -->
+     <bool name="reorder_button">false</bool>
+diff --git a/launcher/app/src/test/java/com/gathin/tvhome/DockFillWidthTest.java b/launcher/app/src/test/java/com/gathin/tvhome/DockFillWidthTest.java
+new file mode 100644
+index 0000000..881bbd5
+--- /dev/null
++++ b/launcher/app/src/test/java/com/gathin/tvhome/DockFillWidthTest.java
+@@ -0,0 +1,43 @@
++package com.gathin.tvhome;
++
++import org.junit.Test;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
++
++/** AppAdapter.tileWidthPx with dock_fill_width: no 180dp cap, still clear of the focus zoom and the screen height. */
++public class DockFillWidthTest {
++
++    private static final float D = 2f;              // 1080p TV: 2 px per dp
++    private static final int INNER = 1696;          // grid width minus padding at 1920 px (as TileFitTest)
++    private static final int GRID_H = 846;          // grid height under the top bar (as TileFitTest)
++
++    @Test
++    public void offKeepsTheCap() {
++        assertEquals(360, AppAdapter.tileWidthPx(INNER, 3, D));
++        assertEquals(AppAdapter.tileWidthPx(INNER, 3, D), AppAdapter.tileWidthPx(INNER, 3, false, D));
++        assertEquals(AppAdapter.tileWidthPx(INNER, GRID_H, 3, 2, true, true, D),
++                AppAdapter.tileWidthPx(INNER, GRID_H, 3, 2, true, true, false, D));
++    }
++
++    @Test
++    public void threeColumnsFillTheirCells() {
++        int w = AppAdapter.tileWidthPx(INNER, GRID_H, 3, 0, true, true, true, D);
++        assertEquals(491, w);                                   // (int) ((1696/3 - 24) / 1.1)
++        assertTrue(w * AppAdapter.FOCUS_SCALE <= INNER / 3f);   // the zoomed tile stays inside its cell
++    }
++
++    @Test
++    public void fourColumnsBarelyChange() {
++        int capped = AppAdapter.tileWidthPx(INNER, 4, D), filled = AppAdapter.tileWidthPx(INNER, 4, true, D);
++        assertTrue(filled >= capped && filled - capped <= 2 * D);   // 363 px instead of 360
++    }
++
++    @Test
++    public void oneColumnStillLeavesRoomForTheTitle() {
++        int w = AppAdapter.tileWidthPx(INNER, GRID_H, 1, 0, true, true, true, D);
++        int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(w), D);
++        float reserved = (AppAdapter.DOCK_EXTRA_DP + AppAdapter.BOTTOM_ROOM_DP + AppAdapter.TITLE_ROOM_DP) * D;
++        assertTrue(itemH + reserved <= GRID_H + 2);
++    }
++}
+diff --git a/themes/README.md b/themes/README.md
+index c0b4551..6df6ed5 100644
+--- a/themes/README.md
++++ b/themes/README.md
+@@ -99,6 +99,7 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can
+ | `glow_style` | string | Shape of the glow behind the focused app, in its colour: `radial` (default) or `horizon`, the colour washing down from the top edge to black; the cinematic shelf keeps its own |
+ | `cinematic_home` | bool | Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its colour, with a larger name, "Last opened" (apps opened from Home), dock position dots, a focus glow in the app's colour and a translucent dock band; off by default |
+ | `dock_even_padding` | bool | The dock band's padding equals the gap between its tiles on all four sides, as far as the grid's edges leave room (`false` by default) |
++| `dock_fill_width` | bool | Tiles grow past the 180dp design width to fill their columns, so `columns` 2 or 3 gives large 16:9 tiles with a small gap; the dock and its title still fit the height (`false` by default) |
+ | `dock_glass` | bool | The dock band as light frosted glass like the top bar's pills (`false` by default); suits `sky_intensity` or a wallpaper, where the solid band reads as a dark slab |
+ | `ambient_glow` | bool | The glow behind the dock in the focused app's colour (`true` by default); `false` keeps only `background_color` or the wallpaper, e.g. for a calm photo background |
+ | `app_glow` | bool | The focus highlight glows in the focused app's colour on every tile, as `cinematic_home` does for the dock (`false` by default) |

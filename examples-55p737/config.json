@@ -1,0 +1,16 @@
+{
+  "dock_apps": ["com.google.android.youtube.tv", "com.netflix.ninja", "com.disney.disneyplus", "com.google.android.youtube.tvmusic"],
+  "hidden_apps": [],
+  "live_tv_package": "com.tcl.tv",
+  "columns": 4,
+  "wallpaper": true,
+  "wallpaper_rotation_minutes": 1,
+  "wallpaper_order": "shuffle",
+  "wallpaper_dim": 35,
+  "wallpaper_true_color": true,
+  "dock_opacity": 70,
+  "ambient_glow": false,
+  "settings_key_keycodes": [4077],
+  "app_keys": ["4062:com.netflix.ninja", "4065:com.google.android.youtube.tv", "4099:input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744384",
+               "4001:com.tcl.tv"]
+}

@@ -1,0 +1,16 @@
+# TCL 55P737 (Smart TV Pro, BeyondTV4, G03_4K_GB, V8-R51MT05-LF1V620, AR09), Android TV 11, Taiwan, Wi-Fi.
+# Batch 1: TCL/Google content, ads, promos and analytics. Taken from examples/tcl-55c725 (same firmware).
+# Undo: TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/examples-55p737/1-ads-telemetry.txt
+# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/examples-55p737/1-ads-telemetry.txt
+com.tcl.tv.tclhome_passive
+com.tcl.waterfall.overseas
+com.tcl.channelplus
+com.tcl.overseasappshow
+com.tcl.partnercustomizer
+com.tcl.esticker
+com.tcl.messagebox
+com.tcl.bi
+com.tcl.logkit                         # TCL log collection; found disabled on the 55C725
+com.google.android.partnersetup
+android.autoinstalls.config.google.gtvpai
+com.google.android.feedback

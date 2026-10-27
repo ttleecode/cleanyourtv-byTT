@@ -1,0 +1,12 @@
+# TCL 55P737, batch 3: preloads the owner does not use (checklist 2026-10-23).
+# Apply: TV_HOST=<tv-ip> tools/disable.sh <本 repo 路徑>/examples-55p737/3-preloads-by-choice.txt
+# Undo:  TV_HOST=<tv-ip> tools/restore.sh <本 repo 路徑>/examples-55p737/3-preloads-by-choice.txt
+# Kept by choice: Chromecast (mediashell), Miracast, Google voice (katniss, com.tcl.assistant), YouTube Music.
+# Kept for safety: com.google.android.tv.remote.service (carries the remote's mic on some TCL sets).
+com.tcl.MultiScreenInteraction_TV      # T-Cast
+com.tcl.smartalexa                     # Alexa
+com.tcl.ui_mediaCenter                 # USB media player; pm enable to play USB drives
+com.tcl.gallery
+com.google.android.videos
+com.tcl.browser
+com.google.android.play.games
